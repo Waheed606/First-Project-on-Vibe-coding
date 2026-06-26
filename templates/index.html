@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Explorer</title>
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="A premium modern dashboard for tracking and filtering BigQuery release notes and updates directly from the official feed.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Background glow elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 18H11V16H13V18ZM15.2 10.29L14.3 11.2C13.57 11.93 13 12.5 13 14H11V13.5C11 12.4 11.45 11.4 12.18 10.67L13.42 9.42C13.79 9.06 14 8.56 14 8C14 6.9 13.1 6 12 6C10.9 6 10 6.9 10 8H8C8 5.79 9.79 4 12 4C14.21 4 16 5.79 16 8C16 8.88 15.64 9.68 15.2 10.29Z" fill="url(#logo-grad)"/>
+                        <defs>
+                            <linearGradient id="logo-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#3b82f6" />
+                                <stop offset="100%" stop-color="#8b5cf6" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>BigQuery Updates</h1>
+                    <p class="subtitle">Real-time official release notes explorer</p>
+                </div>
+            </div>
+
+            <!-- Controls area (Refresh button and status) -->
+            <div class="header-actions">
+                <div id="connection-status" class="status-badge connected">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+                <button id="refresh-btn" class="btn btn-primary" title="Refresh release notes">
+                    <!-- Refresh SVG icon -->
+                    <svg id="refresh-icon" class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
+                    </svg>
+                    <!-- Spinner SVG icon (initially hidden) -->
+                    <svg id="spinner-icon" class="icon spinner hidden" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4"></circle>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Overview Panel -->
+        <section class="stats-panel card">
+            <div class="stat-card">
+                <span class="stat-value" id="total-count">0</span>
+                <span class="stat-label">Total Updates</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value text-feature" id="features-count">0</span>
+                <span class="stat-label">Features</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value text-fix" id="fixes-count">0</span>
+                <span class="stat-label">Fixes</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="last-updated-time">--:--</span>
+                <span class="stat-label">Last Updated</span>
+            </div>
+        </section>
+
+        <!-- Filters & Search Bar -->
+        <section class="search-filters-section">
+            <div class="search-box card">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.5 14H14.71L14.43 13.73C15.41 12.59 16 11.11 16 9.5C16 5.91 13.09 3 9.5 3C5.91 3 3 5.91 3 9.5C3 13.09 5.91 16 9.5 16C11.11 16 12.59 15.41 13.73 14.43L14 14.71V15.5L19 20.49L20.49 19L15.5 14ZM9.5 14C7.01 14 5 11.99 5 9.5C5 7.01 7.01 5 9.5 5C11.99 5 14 7.01 14 9.5C14 11.99 11.99 14 9.5 14Z" fill="currentColor"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="Search release notes by keywords (e.g. storage, SQL, JSON)..." autocomplete="off">
+                <button id="clear-search-btn" class="clear-btn hidden" title="Clear Search">&times;</button>
+            </div>
+
+            <!-- Categories Toggles -->
+            <div class="filters-container">
+                <span class="filter-label">Filter by type:</span>
+                <div class="filter-badges" id="category-filters">
+                    <button class="filter-badge active" data-category="All">All</button>
+                    <button class="filter-badge" data-category="Feature">Features</button>
+                    <button class="filter-badge" data-category="Fix">Fixes</button>
+                    <button class="filter-badge" data-category="Change">Changes</button>
+                    <button class="filter-badge" data-category="Deprecation">Deprecations</button>
+                    <button class="filter-badge" data-category="Security">Security</button>
+                    <button class="filter-badge" data-category="Announcement">Announcements</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Feed List -->
+        <main class="feed-section">
+            <div id="alert-banner" class="alert hidden">
+                <div class="alert-content">
+                    <span class="alert-icon">⚠️</span>
+                    <span class="alert-message" id="alert-text">Message goes here</span>
+                </div>
+                <button class="alert-close" id="alert-close-btn">&times;</button>
+            </div>
+
+            <!-- Feed Container -->
+            <div id="feed-container" class="feed-list">
+                <!-- Skeleton loader placeholder (shown initially) -->
+                <div class="skeleton-card card">
+                    <div class="skeleton-shimmer"></div>
+                    <div class="skeleton-header">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-badges">
+                            <div class="skeleton-badge"></div>
+                            <div class="skeleton-badge"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-body">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line medium"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card card">
+                    <div class="skeleton-shimmer"></div>
+                    <div class="skeleton-header">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-badges">
+                            <div class="skeleton-badge"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-body">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line medium"></div>
+                    </div>
+                </div>
+                <div class="skeleton-card card">
+                    <div class="skeleton-shimmer"></div>
+                    <div class="skeleton-header">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-badges">
+                            <div class="skeleton-badge"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-body">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state card hidden">
+                <div class="empty-icon">📂</div>
+                <h3>No Release Notes Found</h3>
+                <p>Try clearing your search filters or force-refreshing the content.</p>
+                <button id="reset-filters-btn" class="btn btn-secondary">Reset Filters</button>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>BigQuery Release Notes Explorer &bull; Built with Flask &amp; Vanilla CSS/JS</p>
+            <p class="source-link">Data parsed dynamically from the <a href="https://docs.cloud.google.com/feeds/bigquery-release-notes.xml" target="_blank" rel="noopener noreferrer">Official GCP RSS Feed</a></p>
+        </footer>
+    </div>
+
+    <!-- Scroll to Top Button -->
+    <button id="scroll-top-btn" class="scroll-btn hidden" title="Scroll to Top">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12L5.41 13.41L11 7.83V20H13V7.83L18.58 13.42L20 12L12 4L4 12Z" fill="currentColor"/>
+        </svg>
+    </button>
+
+    <!-- Floating Selection/Highlight Tweet Button -->
+    <button id="floating-tweet-btn" class="floating-selection-btn hidden" title="Tweet selected text">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        <span>Tweet Selection</span>
+    </button>
+
+    <!-- Bottom Selection Action Bar -->
+    <div id="selection-bar" class="selection-bar hidden">
+        <div class="selection-bar-content">
+            <span class="selection-count">
+                <span class="selection-count-badge" id="selected-count-badge">0</span> 
+                <span id="selected-count-text">updates selected</span>
+            </span>
+            <div class="selection-actions">
+                <button id="selection-clear-btn" class="btn btn-secondary btn-sm">Clear</button>
+                <button id="selection-tweet-btn" class="btn btn-primary btn-sm">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span>Tweet Selected</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tweet Customizer/Preview Modal -->
+    <div id="tweet-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-area">
+                    <div class="modal-logo-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </div>
+                    <h2>Draft Your Tweet</h2>
+                </div>
+                <button id="close-tweet-modal" class="modal-close-btn" title="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tweet-options" id="tweet-options-panel">
+                    <span class="options-label">Customize content:</span>
+                    <div class="options-checkboxes">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="tweet-opt-badges" checked>
+                            <span class="checkbox-checkmark"></span>
+                            Include Category Badges
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="tweet-opt-date" checked>
+                            <span class="checkbox-checkmark"></span>
+                            Include Date
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="tweet-opt-link" checked>
+                            <span class="checkbox-checkmark"></span>
+                            Include Official Link
+                        </label>
+                    </div>
+                </div>
+
+                <div class="tweet-textarea-wrapper">
+                    <textarea id="tweet-textarea" rows="6" placeholder="Draft your tweet..."></textarea>
+                    <div class="tweet-editor-footer">
+                        <span class="char-counter-wrapper">
+                            <svg class="char-progress" width="24" height="24">
+                                <circle class="char-progress-bg" cx="12" cy="12" r="10"></circle>
+                                <circle id="char-progress-fg" class="char-progress-fg" cx="12" cy="12" r="10"></circle>
+                            </svg>
+                            <span id="tweet-char-count">280</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-tweet-btn" class="btn btn-secondary">Cancel</button>
+                <button id="publish-tweet-btn" class="btn btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span>Post to X</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JavaScript File -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
